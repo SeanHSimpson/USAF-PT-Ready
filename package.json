@@ -1,0 +1,15 @@
+{
+  "name": "pt-ready",
+  "version": "1.3.1",
+  "private": true,
+  "description": "USAF PFRA Fitness Tracker",
+  "scripts": {
+    "sync": "cap sync",
+    "open:android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^7.6.2",
+    "@capacitor/core": "^8.3.1"
+  }
+}

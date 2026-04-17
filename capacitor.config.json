@@ -1,0 +1,8 @@
+{
+  "appId": "com.ptready.app",
+  "appName": "PT Ready",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

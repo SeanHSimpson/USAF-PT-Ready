@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/icons/ptr-icon-512.png">
+<link rel="apple-touch-icon" href="assets/icons/ptr-icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#a07840">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PT Ready">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PFRA Preparedness Tool - March 2026 Standards</title>
+<link rel="stylesheet" href="assets/fonts/google-fonts.css"/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+<!-- TIMER MODAL -->
+<div id="timer-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:#0f1318;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div id="timer-label" style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);">REST</div>
+  <div id="timer-sub" style="font-size:13px;color:var(--muted);min-height:18px;margin-top:-10px;"></div>
+  <div style="position:relative;width:220px;height:220px;margin:8px 0;">
+    <svg width="220" height="220" viewBox="0 0 220 220" style="transform:rotate(-90deg);">
+      <circle cx="110" cy="110" r="98" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="10"/>
+      <circle id="timer-ring-prog" cx="110" cy="110" r="98" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round"
+        stroke-dasharray="616" stroke-dashoffset="0" style="transition:stroke-dashoffset 0.9s linear;"/>
+    </svg>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+      <div id="timer-display" style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:80px;color:#fff;letter-spacing:4px;line-height:1;transition:color 0.3s;">0:00</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+    <button id="timer-pause-btn" onclick="toggleTimerPause()" style="padding:14px 32px;background:var(--accent);color:#000;border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;letter-spacing:1px;cursor:pointer;min-width:110px;">Pause</button>
+    <button onclick="timerReset()" style="padding:14px 24px;background:rgba(255,255,255,0.08);color:#ccc;border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;letter-spacing:1px;cursor:pointer;">Reset</button>
+    <button onclick="closeTimer()" style="padding:14px 24px;background:rgba(255,255,255,0.08);color:#ccc;border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;letter-spacing:1px;cursor:pointer;">Skip</button>
+  </div>
+</div>
+
+<!-- PWA Install Banner -->
+<div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#0f1318;border-top:2px solid #a07840;padding:12px 20px;display:none;align-items:center;gap:12px;flex-wrap:wrap;">
+  <div style="flex:1;min-width:200px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:2px;color:#a07840;text-transform:uppercase;">Install PT Tracker</div>
+    <div style="font-size:12px;color:#5a6a7a;margin-top:2px;">Add to your home screen for app-like access</div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button id="pwa-install-btn" onclick="installPWA()" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;background:#a07840;color:#000;border:none;padding:9px 18px;border-radius:3px;cursor:pointer;">Install</button>
+    <button onclick="document.getElementById('pwa-banner').style.display='none'" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;background:transparent;color:#5a6a7a;border:1px solid #1e2730;padding:9px 14px;border-radius:3px;cursor:pointer;">Later</button>
+  </div>
+</div>
+
+<!-- About Modal -->
+<div class="about-modal" id="about-modal" onclick="if(event.target===this)closeAbout()">
+  <div class="about-card">
+    <h2>PT Ready</h2>
+    <div class="about-ver">Version 1.3.1 - March 2026</div>
+
+    <!-- WHAT IS PT READY: static, no collapse -->
+    <div class="about-section about-section-static">
+      <h3>What is PT Ready?</h3>
+      <p>PT Ready is an unofficial PFRA fitness preparation tool built for U.S. Air Force members. It uses the March 2026 PFRA scoring standards and the Warfighter's Fitness Playbook 2.0 (Feb 2026) to help you calculate your score, generate personalized AI-driven training plans, and track your progress - all in one place on your phone.</p>
+    </div>
+
+    <!-- FEATURES: collapsed by default -->
+    <div class="about-acc" id="about-acc-features">
+      <div class="about-acc-header" onclick="toggleAboutAcc('features')">
+        <span>Features</span><span style="display:flex;align-items:center;gap:8px;"><span style="font-size:9px;letter-spacing:1px;color:#7a6030;font-weight:400;text-transform:uppercase;" class="about-tap-hint">tap to expand</span><span class="about-acc-chevron">v</span></span>
+      </div>
+      <div class="about-acc-body">
+        <ul>
+          <li><strong>Score Calculator</strong> - Enter your push-ups, sit-ups, cardio, and waist measurement to get your total PFRA score and component breakdown by age group and gender. Includes built-in event timers and official HAMR audio to facilitate a mock test.</li>
+          <li><strong>AI Training Plan</strong> - Generate a personalized training plan based on your scores and selected test date. Plans follow the Warfighter's Fitness Playbook structure with warm-up, main workout, and cool-down.</li>
+          <li><strong>Workout Timers</strong> - Tap any rest or hold to launch a fullscreen countdown timer that auto-returns when done.</li>
+          <li><strong>Workout Log</strong> - Log daily sessions and track completion across your plan.</li>
+          <li><strong>Score History</strong> - Save and review past scores to see your progress over time.</li>
+          <li><strong>PDF Export</strong> - Download your training plan as a formatted PDF.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- HOW TO USE: collapsed by default -->
+    <div class="about-acc" id="about-acc-howto">
+      <div class="about-acc-header" onclick="toggleAboutAcc('howto')">
+        <span>How to Use</span><span style="display:flex;align-items:center;gap:8px;"><span style="font-size:9px;letter-spacing:1px;color:#7a6030;font-weight:400;text-transform:uppercase;" class="about-tap-hint">tap to expand</span><span class="about-acc-chevron">v</span></span>
+      </div>
+      <div class="about-acc-body">
+        <ul>
+          <li>Start on the <strong>Calculator</strong> tab - enter your age, gender, and scores, then tap Calculate.</li>
+          <li>Go to <strong>AI Plan</strong> - review your scores and tap Generate Plan. This calls the AI to build a custom program length based on your selected test date.</li>
+          <li>Navigate days with the arrows. Tap exercises to check them off. Tap rest buttons to start a timer.</li>
+          <li>Tap <strong>Log This Workout</strong> when done to record the session.</li>
+          <li>Use the <strong>History</strong> tab to review past scores and plan progress.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- INSTALL: collapsed by default -->
+    <div class="about-acc" id="about-acc-install">
+      <div class="about-acc-header" onclick="toggleAboutAcc('install')">
+        <span>Install App</span><span style="display:flex;align-items:center;gap:8px;"><span style="font-size:9px;letter-spacing:1px;color:#7a6030;font-weight:400;text-transform:uppercase;" class="about-tap-hint">tap to expand</span><span class="about-acc-chevron">v</span></span>
+      </div>
+      <div class="about-acc-body">
+        <div class="install-platform">
+          <div class="install-platform-title"> iPhone / iPad (Safari)</div>
+          <div class="about-ios-step">
+            <span class="about-step-num">1</span>
+            <span>Tap the <strong>Share button</strong> at the bottom of Safari - the box with an arrow pointing up</span>
+          </div>
+          <div class="about-ios-step">
+            <span class="about-step-num">2</span>
+            <span>Scroll down and tap <strong>"Add to Home Screen"</strong></span>
+          </div>
+          <div class="about-ios-step">
+            <span class="about-step-num">3</span>
+            <span>Tap <strong>"Add"</strong> in the top right - PT Ready will appear on your home screen</span>
+          </div>
+        </div>
+        <div class="install-platform">
+          <div class="install-platform-title"> Android (Chrome)</div>
+          <div class="about-ios-step">
+            <span class="about-step-num">1</span>
+            <span>Tap the <strong>three-dot menu</strong> in the top right of Chrome</span>
+          </div>
+          <div class="about-ios-step">
+            <span class="about-step-num">2</span>
+            <span>Tap <strong>"Add to Home Screen"</strong> or <strong>"Install App"</strong></span>
+          </div>
+          <div class="about-ios-step">
+            <span class="about-step-num">3</span>
+            <span>Tap <strong>"Install"</strong> - PT Ready will appear on your home screen</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINKS: expanded, no collapse -->
+    <div class="about-section about-section-static" style="margin-top:10px;">
+      <h3>Links</h3>
+      <ul>
+        <li><a href="https://www.afpc.af.mil/Portals/70/documents/FITNESS/Tab%204.%20The%20Warfighter's%20Fitness%20Playbook%20%202.0%20Feb%202026.pdf" target="_blank" style="color:var(--accent);">Warfighter's Fitness Playbook 2.0 (Feb 2026)</a></li>
+        <li><a href="https://www.afpc.af.mil/Portals/70/documents/FITNESS/PFRA%20Scoring%20Charts.pdf" target="_blank" style="color:var(--accent);">PFRA Scoring Charts (Official PDF)</a></li>
+        <li><a href="https://www.afpc.af.mil/Portals/70/documents/FITNESS/Tab%205.%20Pregnancy%20&%20Postpardum%20Performance%20Training%20Guide.pdf" target="_blank" style="color:var(--accent);">Pregnancy & Postpartum Performance Training Guide</a></li>
+      </ul>
+      <p style="margin-top:8px;font-size:11px;color:#556;">This tool is unofficial and not affiliated with or endorsed by the U.S. Air Force or AFPC.</p>
+    </div>
+
+    <!-- VERSION NOTES: collapsed by default -->
+    <div class="about-acc" id="about-acc-versions">
+      <div class="about-acc-header" onclick="toggleAboutAcc('versions')">
+        <span>Version Notes</span><span style="display:flex;align-items:center;gap:8px;"><span style="font-size:9px;letter-spacing:1px;color:#7a6030;font-weight:400;text-transform:uppercase;" class="about-tap-hint">tap to expand</span><span class="about-acc-chevron">v</span></span>
+      </div>
+      <div class="about-acc-body">
+        <div class="release-item">
+          <span class="release-ver">v1.3.1</span><span class="release-date">Mar 2026</span>
+          <ul style="margin-top:6px;">
+            <li>Minor UX tweaks</li>
+          </ul>
+        </div>
+        <div class="release-item">
+          <span class="release-ver">v1.3</span><span class="release-date">Feb 2026</span>
+          <ul style="margin-top:6px;">
+            <li>Renamed to PT Ready</li>
+            <li>In-app feedback mechanism</li>
+            <li>Fullscreen auto-start timers with auto-return</li>
+            <li>Haptic feedback on primary action buttons</li>
+            <li>Warm-up / cool-down section time estimates removed</li>
+          </ul>
+        </div>
+        <div class="release-item">
+          <span class="release-ver">v1.2</span><span class="release-date">Feb 2026</span>
+          <ul style="margin-top:6px;">
+            <li>Warfighter's Fitness Playbook 2.0 integration</li>
+            <li>Three-section workout display (Warm-Up / Main / Cool-Down)</li>
+            <li>Cardio auto-progression by week</li>
+            <li>March 2026 PFRA scoring standards</li>
+            <li>PDF export</li>
+          </ul>
+        </div>
+        <div class="release-item">
+          <span class="release-ver">v1.1</span><span class="release-date">Jan 2026</span>
+          <ul style="margin-top:6px;">
+            <li>AI plan generation via Groq API</li>
+            <li>Score history and workout logging</li>
+            <li>WHTR component added</li>
+          </ul>
+        </div>
+        <div class="release-item">
+          <span class="release-ver">v1.0</span><span class="release-date">Jan 2026</span>
+          <ul style="margin-top:6px;">
+            <li>Initial release - score calculator only</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+<button class="close-about" onclick="closeAbout()">Close</button>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-accent"></div>
+    <div class="logo">
+      <div class="logo-main">PT Ready</div>
+      <div class="logo-sub">March 2026 - PFRA Standards</div>
+    </div>
+    <div class="header-right">
+      <span class="header-ver">v1.3.1</span>
+      <button class="about-btn" onclick="openAbout()">About</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="tabs">
+  <button class="tab active" onclick="switchTab('calc',this)">
+    <span class="tab-icon"></span>Calculator
+  </button>
+  <button class="tab" onclick="switchTab('ai',this)">
+    <span class="tab-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="7" width="20" height="13" rx="2"/>
+        <circle cx="9" cy="13" r="2" fill="currentColor" stroke="none"/>
+        <circle cx="15" cy="13" r="2" fill="currentColor" stroke="none"/>
+        <path d="M12 7V4"/>
+        <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+        <path d="M2 15h2M20 15h2"/>
+        <path d="M8 17h8"/>
+      </svg>
+    </span>AI Plan
+  </button>
+  <button class="tab" onclick="switchTab('log',this)">
+    <span class="tab-icon"></span>Log
+  </button>
+  <button class="tab" onclick="switchTab('history',this)">
+    <span class="tab-icon"></span>History
+  </button>
+</nav>
+
+<div class="content">
+
+<!-- CALCULATOR -->
+<div id="panel-calc" class="panel active">
+
+  <!-- Profile -->
+  <div class="card">
+    <div class="card-title">Member Profile</div>
+    <div class="row">
+      <div class="field">
+        <label>Sex</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="setSex('male',this)">Male</button>
+          <button class="toggle-btn" onclick="setSex('female',this)">Female</button>
+        </div>
+      </div>
+      <div class="field sm">
+        <label>Age</label>
+        <input type="number" id="age" min="17" max="70" value="28"/>
+      </div>
+      <div class="field">
+        <label>Test Date (optional)</label>
+        <input type="date" id="testDate"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exemption note shown when any component is exempted -->
+  <div id="exemptNote" class="alert alert-info" style="display:none;margin-bottom:8px;">
+    Note: Exempted components are excluded from scoring. The composite is calculated from remaining components, redistributed proportionally.
+  </div>
+
+  <!-- Push-ups ACCORDION -->
+  <div class="acc-card" id="pu-card">
+    <div class="acc-header" onclick="toggleAcc('pu')">
+      <div class="acc-header-left">
+        <span class="acc-title">Push-ups</span>
+        <span class="acc-pts">max 15 pts</span>
+      </div>
+      <label class="acc-exempt" onclick="event.stopPropagation()">
+        <input type="checkbox" id="puExempt" onchange="toggleExempt('pu-inputs','puExempt')" style="accent-color:var(--accent);width:14px;height:14px;"/>
+        Exempt
+      </label>
+      <span class="acc-score-pill" id="acc-pill-pu"> - </span>
+      <span class="acc-tap-hint" id="acc-hint-pu">tap to expand</span><span class="acc-chevron" id="acc-chev-pu">v</span>
+    </div>
+    <div class="acc-body" id="acc-body-pu" style="display:none;">
+      <div id="pu-inputs">
+        <div class="row">
+          <div class="field">
+            <label>Type</label>
+            <div class="toggle-group">
+              <button class="toggle-btn active" onclick="setPuType('standard',this)">Standard (1 min)</button>
+              <button class="toggle-btn" onclick="setPuType('hr',this)">Hand Release (2 min)</button>
+            </div>
+          </div>
+          <div class="field sm">
+            <label>Reps</label>
+            <input type="number" id="puReps" min="0" max="150" placeholder="0"/>
+          </div>
+        </div>
+        <div id="pu-timer-row" style="display:block;margin-top:10px;">
+          <button id="pu-timer-btn" onclick="startCountdown(60,'Push-ups')" class="calc-timer-btn">Start 1:00 Timer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core ACCORDION -->
+  <div class="acc-card" id="core-card">
+    <div class="acc-header" onclick="toggleAcc('core')">
+      <div class="acc-header-left">
+        <span class="acc-title">Core</span>
+        <span class="acc-pts">max 15 pts</span>
+      </div>
+      <label class="acc-exempt" onclick="event.stopPropagation()">
+        <input type="checkbox" id="coreExempt" onchange="toggleExempt('core-inputs','coreExempt')" style="accent-color:var(--accent);width:14px;height:14px;"/>
+        Exempt
+      </label>
+      <span class="acc-score-pill" id="acc-pill-core"> - </span>
+      <span class="acc-tap-hint" id="acc-hint-core">tap to expand</span><span class="acc-chevron" id="acc-chev-core">v</span>
+    </div>
+    <div class="acc-body" id="acc-body-core" style="display:none;">
+      <div id="core-inputs">
+        <div class="row">
+          <div class="field">
+            <label>Type</label>
+            <div class="toggle-group">
+              <button class="toggle-btn active" onclick="setCoreType('situp',this)">Sit-ups (1 min)</button>
+              <button class="toggle-btn" onclick="setCoreType('clrc',this)">Cross Leg RC (2 min)</button>
+              <button class="toggle-btn" onclick="setCoreType('plank',this)">Forearm Plank</button>
+            </div>
+          </div>
+          <div class="field sm" id="core-reps-field">
+            <label>Reps</label>
+            <input type="number" id="coreReps" min="0" max="150" placeholder="0"/>
+          </div>
+          <div id="plank-time-row" style="display:none;gap:8px;flex:1;">
+            <div class="field sm" id="core-min-field" style="flex:1;">
+              <label>Min</label>
+              <input type="number" id="plankMin" min="0" max="10" placeholder="0"/>
+            </div>
+            <div class="field sm" id="core-sec-field" style="flex:1;">
+              <label>Sec</label>
+              <input type="number" id="plankSec" min="0" max="59" placeholder="00"/>
+            </div>
+          </div>
+        </div>
+        <div id="core-timer-row" style="display:none;margin-top:10px;">
+          <button id="core-timer-btn" class="calc-timer-btn">Start Timer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cardio ACCORDION -->
+  <div class="acc-card" id="cardio-card">
+    <div class="acc-header" onclick="toggleAcc('cardio')">
+      <div class="acc-header-left">
+        <span class="acc-title">Cardio</span>
+        <span class="acc-pts">max 50 pts</span>
+      </div>
+      <label class="acc-exempt" onclick="event.stopPropagation()">
+        <input type="checkbox" id="cardioExempt" onchange="toggleExempt('cardio-inputs','cardioExempt')" style="accent-color:var(--accent);width:14px;height:14px;"/>
+        Exempt
+      </label>
+      <span class="acc-score-pill" id="acc-pill-cardio"> - </span>
+      <span class="acc-tap-hint" id="acc-hint-cardio">tap to expand</span><span class="acc-chevron" id="acc-chev-cardio">v</span>
+    </div>
+    <div class="acc-body" id="acc-body-cardio" style="display:none;">
+      <div id="cardio-inputs">
+        <div class="row">
+          <div class="field">
+            <label>Type</label>
+            <div class="toggle-group">
+              <button class="toggle-btn active" onclick="setCardioType('run',this)">2-Mile Run</button>
+              <button class="toggle-btn" onclick="setCardioType('hamr',this)">HAMR Shuttle</button>
+            </div>
+          </div>
+          <div class="field sm" id="hamr-field" style="display:none;">
+            <label>Shuttles</label>
+            <input type="number" id="hamrShuttles" min="0" max="200" placeholder="0"/>
+          </div>
+        </div>
+        <div id="hamr-player-row" style="display:none;margin-top:10px;">
+          <div style="background:#0f1318;border:1px solid #2a3540;border-radius:8px;padding:12px 14px;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;">HAMR Audio - Official 20m Beep Test</div>
+            <audio id="hamr-audio" controls preload="none"
+              src="assets/audio/air-force-20m-hamr-audio-file.mp3"
+              style="width:100%;height:36px;accent-color:var(--accent);">
+              Your browser does not support audio.
+            </audio>
+            <div style="font-size:11px;color:#445;margin-top:6px;">Enter your shuttle count above after stopping.</div>
+          </div>
+        </div>
+
+        <div id="run-time-row" style="display:flex;gap:12px;margin-top:4px;">
+          <div class="field sm" id="run-min-field" style="flex:1;">
+            <label>Minutes</label>
+            <input type="number" id="runMin" min="0" max="40" placeholder="00"/>
+          </div>
+          <div class="field sm" id="run-sec-field" style="flex:1;">
+            <label>Seconds</label>
+            <input type="number" id="runSec" min="0" max="59" placeholder="00"/>
+          </div>
+        </div>
+        <div id="run-timer-row" style="margin-top:10px;">
+          <button onclick="startStopwatch('2-Mile Run','run')" class="calc-timer-btn">Start Run Timer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHtR ACCORDION -->
+  <div class="acc-card" id="whtr-card">
+    <div class="acc-header" onclick="toggleAcc('whtr')">
+      <div class="acc-header-left">
+        <span class="acc-title">WHtR</span>
+        <span class="acc-pts">max 20 pts</span>
+      </div>
+      <label class="acc-exempt" onclick="event.stopPropagation()">
+        <input type="checkbox" id="whtrExempt" onchange="toggleExempt('whtr-inputs','whtrExempt')" style="accent-color:var(--accent);width:14px;height:14px;"/>
+        Exempt
+      </label>
+      <span class="acc-score-pill" id="acc-pill-whtr"> - </span>
+      <span class="acc-tap-hint" id="acc-hint-whtr">tap to expand</span><span class="acc-chevron" id="acc-chev-whtr">v</span>
+    </div>
+    <div class="acc-body" id="acc-body-whtr" style="display:none;">
+      <div id="whtr-inputs">
+        <div class="row">
+          <div class="field">
+            <label>Waist (inches)</label>
+            <input type="number" id="waist" min="20" max="80" step="0.5" placeholder="e.g. 32.0"/>
+          </div>
+          <div class="field">
+            <label>Height (inches)</label>
+            <input type="number" id="height" min="48" max="96" step="0.5" placeholder="e.g. 70.0"/>
+          </div>
+          <div class="field">
+            <label>WHtR</label>
+            <input type="text" id="whtrDisplay" readonly placeholder="Auto-calculated"/>
+          </div>
+        </div>
+        <div id="whtr-risk" style="display:none;margin-top:4px;font-size:12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;">
+    <button class="btn btn-primary" onclick="calculate()">Calculate Score</button>
+    <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" style="display:none;margin-top:24px;">
+    <div id="result-banner" class="result-banner">
+      <div>
+        <div class="grade" id="res-total"></div>
+        <div style="font-size:11px;letter-spacing:1px;opacity:.7;margin-top:2px;">composite score / 100</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="grade-label" id="res-category"></div>
+        <div style="font-size:11px;margin-top:4px;opacity:.7;" id="res-days"></div>
+        <div id="score-badge" style="margin-top:8px;font-size:28px;line-height:1;" title=""></div>
+      </div>
+    </div>
+    <div id="min-fail-msg" class="min-fail" style="display:none;"></div>
+
+    <div class="score-grid">
+      <div class="score-box" id="box-pu">
+        <div class="score-num" id="res-pu"> - </div>
+        <div class="score-label" id="res-pu-label">Push-ups</div>
+        <div class="score-sub" id="res-pu-detail"></div>
+      </div>
+      <div class="score-box" id="box-core">
+        <div class="score-num" id="res-core"> - </div>
+        <div class="score-label" id="res-core-label">Core</div>
+        <div class="score-sub" id="res-core-detail"></div>
+      </div>
+      <div class="score-box cardio" id="box-cardio">
+        <div class="score-num" id="res-cardio"> - </div>
+        <div class="score-label" id="res-cardio-label">Cardio</div>
+        <div class="score-sub" id="res-cardio-detail"></div>
+      </div>
+      <div class="score-box whtr" id="box-whtr">
+        <div class="score-num" id="res-whtr"> - </div>
+        <div class="score-label" id="res-whtr-label">WHtR</div>
+        <div class="score-sub" id="res-whtr-detail"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;padding:10px 14px;background:rgba(232,160,32,0.06);border:1px solid rgba(232,160,32,0.2);border-radius:6px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#778;">Official Score Charts</span>
+      <a href="https://www.afpc.af.mil/Portals/70/documents/FITNESS/PFRA%20Scoring%20Charts.pdf" target="_blank" rel="noopener" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);text-decoration:none;white-space:nowrap;">View PDF</a>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
+      <button class="btn btn-green" onclick="saveScore()">Save to History</button>
+      <button class="btn btn-secondary" onclick="window.print()">Print Score Sheet</button>
+      <button class="btn btn-secondary" onclick="switchTab('ai',document.querySelector('.tab:nth-child(2)'))">Generate AI Plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI WORKOUT PLAN -->
+<div id="panel-ai" class="panel">
+
+  <div id="ai-no-score" class="alert alert-warn" style="margin-bottom:12px;">&#9888; No score calculated yet &mdash; go to the Calculator tab, enter your results, and press Calculate Score.</div>
+
+  <!-- TEST DATE: always visible -->
+  <div class="card" style="margin-bottom:10px;">
+    <div class="card-title">Official PT Test Date</div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <div class="field" style="flex:1;min-width:160px;margin-bottom:0;">
+        <input type="date" id="aiTestDate" onchange="updateAITestDate()"/>
+      </div>
+      <div id="ai-days-until" style="font-size:14px;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;white-space:nowrap;"></div>
+    </div>
+  </div>
+
+  <!-- Plan Preferences ACCORDION -->
+  <div class="acc-card" style="margin-bottom:10px;">
+    <div class="acc-header" onclick="toggleAcc('ai-prefs')">
+      <div class="acc-header-left">
+        <span class="acc-title">Plan Preferences</span>
+        <span class="acc-pts">optional</span>
+      </div>
+      <span class="acc-tap-hint" id="acc-hint-ai-prefs">tap to expand</span><span class="acc-chevron" id="acc-chev-ai-prefs">v</span>
+    </div>
+    <div class="acc-body" id="acc-body-ai-prefs" style="display:none;">
+      <div class="row">
+        <div class="field">
+          <label>Focus Area</label>
+          <select id="aiFocus">
+            <option value="balanced">Balanced (all components)</option>
+            <option value="cardio">Cardio heavy</option>
+            <option value="strength">Strength heavy</option>
+            <option value="body">Body composition</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Fitness Level</label>
+          <select id="aiLevel">
+            <option value="beginner">Beginner</option>
+            <option value="intermediate" selected>Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Days per week</label>
+          <select id="aiDays">
+            <option value="3">3 days/week</option>
+            <option value="4">4 days/week</option>
+            <option value="5" selected>5 days/week</option>
+            <option value="6">6 days/week</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Injuries or limitations?</label>
+        <input type="text" id="aiInjuries" placeholder="e.g. knee pain, lower back (leave blank if none)"/>
+      </div>
+      <div class="field">
+        <label>Equipment available</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="equip-bw" onclick="setEquipment('bodyweight',this)">Bodyweight Only</button>
+          <button class="toggle-btn" id="equip-gym" onclick="setEquipment('gym',this)">Gym + Bodyweight</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate button -->
+  <button class="btn btn-primary" id="genBtn" onclick="generatePlan()" style="width:100%;font-size:15px;padding:14px 28px;margin-bottom:12px;">
+    &#9889; Generate My Workout Plan
+  </button>
+
+  <!-- WARFIGHTER PLAYBOOK NOTE: below button -->
+  <div style="text-align:center;margin-bottom:16px;">
+    <span style="font-size:11px;color:var(--muted);">Plans follow the </span>
+    <a href="https://www.afpc.af.mil/Portals/70/documents/FITNESS/Tab%204.%20The%20Warfighter's%20Fitness%20Playbook%20%202.0%20Feb%202026.pdf" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);font-weight:600;text-decoration:none;">Warfighter's Fitness Playbook 2.0</a>
+    <span style="font-size:11px;color:var(--muted);"> - PFRA 1 Mar 2026 - v1.2</span>
+  </div>
+
+  <!-- API KEY: only shown on error -->
+  <div id="ai-key-box" style="display:none;margin-bottom:12px;">
+    <div class="card" style="border-color:var(--orange);background:linear-gradient(135deg,#0f1318 0%,#1a0a00 100%);">
+      <div style="font-size:12px;color:var(--orange);margin-bottom:10px;">Warning: Plan failed to generate. If this keeps happening, provide your own free Groq API key below.</div>
+      <input type="password" id="geminiKey" placeholder="Paste Groq API key (gsk_...)" style="margin-bottom:8px;font-family:monospace;font-size:13px;"/>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;">Get a free key at <a href="https://console.groq.com" target="_blank" rel="noopener" style="color:var(--accent);">console.groq.com</a> - Model: Llama 3.3 70B - No data stored</div>
+    </div>
+  </div>
+
+  <div id="ai-error" class="alert alert-error" style="display:none;margin-bottom:16px;"></div>
+
+  <!-- Result card -->
+  <div id="ai-result" style="display:none;">
+    <div class="card">
+      <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span id="ai-result-title">Generating Plan...</span>
+        <span id="ai-parse-status" style="font-size:11px;color:var(--muted);"></span>
+      </div>
+      <div id="ai-output" style="font-size:12px;line-height:1.8;white-space:pre-wrap;color:var(--muted);max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:3px;padding:10px;background:var(--bg);display:none;"></div>
+      <div id="ai-plan-ready" style="display:none;margin-top:12px;">
+        <div style="font-size:13px;color:var(--green);margin-bottom:12px;">&#10003; Plan parsed successfully - <span id="ai-plan-summary"></span></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="activatePlan()" style="font-size:14px;padding:11px 22px;">&#9654; Load Plan into Workout Log</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('ai-output').style.display=document.getElementById('ai-output').style.display==='none'?'block':'none'" style="font-size:11px;">&#128065; Raw Output</button>
+
+        </div>
+      </div>
+      <div id="ai-parse-error" style="display:none;margin-top:12px;">
+        <div style="font-size:13px;color:var(--orange);margin-bottom:10px;" id="ai-parse-error-msg"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="document.getElementById('ai-output').style.display='block'" style="font-size:11px;">&#128065; View Raw Output</button>
+          <button class="btn btn-secondary" onclick="downloadPlan()" style="font-size:11px;">&#8595; Download .txt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- WORKOUT LOG -->
+<div id="panel-log" class="panel">
+
+  <!-- MY PLAN SECTION -->
+  <div id="my-plan-section" style="display:none;">
+    <div class="card" style="border-color:var(--accent);">
+      <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span>&#9776; My Training Plan</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="plan-week-select" onchange="onWeekChange()" style="font-size:12px;padding:5px 10px;border:1px solid var(--border2);background:var(--bg);color:var(--text);border-radius:3px;min-width:100px;"></select>
+          <select id="plan-day-select" onchange="onDayChange()" style="font-size:12px;padding:5px 10px;border:1px solid var(--border2);background:var(--bg);color:var(--text);border-radius:3px;min-width:140px;"></select>
+          <button class="btn btn-secondary" onclick="clearActivePlan()" style="font-size:10px;padding:4px 10px;">&#10005; Clear</button>
+        </div>
+      </div>
+
+      <!-- Day header -->
+      <div id="plan-day-header" style="margin-bottom:12px;"></div>
+
+      <!-- Exercise checklist -->
+      <div id="plan-exercise-list"></div>
+
+      <!-- Progress bar -->
+      <div style="margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;">
+          <span>Today's progress</span>
+          <span id="plan-progress-text">0 / 0 complete</span>
+        </div>
+        <div style="height:4px;background:var(--border2);border-radius:2px;overflow:hidden;">
+          <div id="plan-progress-bar" style="height:100%;width:0%;background:var(--green);border-radius:2px;transition:width .3s;"></div>
+        </div>
+      </div>
+
+      <!-- Log button -->
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-green" id="log-day-btn" onclick="logPlanDay()" style="font-size:13px;padding:10px 20px;">&#128203; Log This Workout</button>
+        <button class="btn btn-secondary" onclick="markDayDone()" style="font-size:11px;">&#10003; Mark Day Complete</button>
+        <button class="btn btn-secondary" onclick="downloadPlanPDF()" style="font-size:11px;">&#8595; Download PDF</button>
+      </div>
+    </div>
+
+    <!-- Plan progress overview -->
+    <div class="card">
+      <div class="card-title">Plan Progress</div>
+      <div id="plan-overview" style="font-size:12px;line-height:1.9;color:var(--muted);"></div>
+    </div>
+  </div>
+
+  <div id="no-plan-msg" class="alert alert-info" style="display:none;">
+    &#9888; No active plan. Go to the <strong>AI Workout Plan</strong> tab, generate a plan, then tap <strong>Load Plan into Workout Log</strong>.
+  </div>
+
+  <!-- Hidden log fields used by logPlanDay() -->
+  <input type="hidden" id="logDate"/>
+  <input type="hidden" id="logType"/>
+  <input type="hidden" id="logReps"/>
+  <input type="hidden" id="logTime"/>
+  <input type="hidden" id="logNotes"/>
+
+  <!-- Previous Workouts Viewer -->
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span id="log-title">Previous Workouts (0 entries)</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select id="logFilter" onchange="renderLogs()" style="font-size:11px;padding:4px 8px;border:1px solid var(--border2);background:var(--bg);color:var(--text);border-radius:3px;">
+          <option value="all">All types</option>
+          <option value="Standard Push-ups">Standard Push-ups</option>
+          <option value="Hand Release Push-ups">Hand Release Push-ups</option>
+          <option value="Sit-ups">Sit-ups</option>
+          <option value="Cross Leg Reverse Crunch">Cross Leg Reverse Crunch</option>
+          <option value="Forearm Plank">Forearm Plank</option>
+          <option value="2-Mile Run">2-Mile Run</option>
+          <option value="HAMR Shuttle Run">HAMR Shuttle Run</option>
+          <option value="Easy Run / Recovery">Easy Run / Recovery</option>
+          <option value="Interval Training">Interval Training</option>
+          <option value="Strength Training">Strength Training</option>
+        </select>
+        <select id="logDateFilter" onchange="renderLogs()" style="font-size:11px;padding:4px 8px;border:1px solid var(--border2);background:var(--bg);color:var(--text);border-radius:3px;">
+          <option value="all">All time</option>
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+        <button class="btn btn-secondary" onclick="exportLogs()" style="font-size:10px;padding:4px 10px;">Export CSV</button>
+      </div>
+    </div>
+    <div id="log-stats" style="display:none;margin-bottom:12px;padding:10px;background:var(--bg);border-radius:3px;border:1px solid var(--border);font-size:12px;color:var(--muted);"></div>
+    <div id="log-list"><p style="color:var(--muted);font-size:13px;">No workouts logged yet.</p></div>
+    <div id="log-load-more" style="display:none;text-align:center;margin-top:12px;">
+      <button class="btn btn-secondary" onclick="loadMoreLogs()" style="font-size:11px;">Load more</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCORE HISTORY -->
+<div id="panel-history" class="panel">
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span>Score History</span>
+      <button class="btn btn-secondary" onclick="exportHistory()" style="font-size:10px;padding:5px 12px;">Export CSV</button>
+    </div>
+    <div id="history-chart-wrap" class="chart-wrap" style="display:none;">
+      <canvas id="histChart"></canvas>
+    </div>
+    <div id="history-list"><p style="color:var(--muted);font-size:13px;">No scores saved yet. Calculate and save a score to track progress.</p></div>
+  </div>
+
+  <div class="card" id="history-stats" style="display:none;">
+    <div class="card-title">Statistics</div>
+    <div class="score-grid" id="stat-grid"></div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script src="app.js"></script>
+<!-- DISCLAIMER FOOTER -->
+<div style="background:#060810;border-top:1px solid #1a2030;padding:12px 20px;padding-bottom:calc(80px + env(safe-area-inset-bottom));text-align:center;">
+
+  <p style="font-size:10px;color:#3a4a5a;line-height:1.6;margin:0;max-width:960px;margin:0 auto;">
+    Warning: Unofficial tool - not affiliated with or endorsed by the USAF, DAF, or DoD. Based on publicly available AF fitness documents. For official guidance consult your UFPM or DAFMAN 36-2905.
+  </p>
+</div>
+
+<!-- STOPWATCH MODAL -->
+<div class="sw-modal" id="sw-modal">
+  <div class="sw-label" id="sw-label">TIMER</div>
+  <div class="sw-display" id="sw-display">0:00</div>
+  <div style="font-size:12px;color:#445;min-height:16px;" id="sw-split"></div>
+  <div class="sw-btn-row">
+    <button class="sw-btn sw-btn-start" id="sw-start-btn" onclick="swToggle()">Start</button>
+    <button class="sw-btn sw-btn-sec" onclick="swReset()">Reset</button>
+    <button class="sw-btn sw-btn-sec" onclick="swClose()">Close</button>
+  </div>
+  <button class="sw-record" id="sw-record-btn" onclick="swRecord()">Record Score</button>
+</div>
+
+<!-- FLOATING FEEDBACK BUTTON -->
+<button id="fb-fab" onclick="openFeedback()" title="Send Feedback"
+  style="position:fixed;bottom:76px;right:16px;z-index:500;
+    height:36px;padding:0 14px;border-radius:18px;
+    background:var(--accent);border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    box-shadow:0 4px 16px rgba(232,160,32,0.35);
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;
+    font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#000;
+    transition:transform .15s,box-shadow .15s;"
+  onmouseenter="this.style.transform='scale(1.05)'"
+  onmouseleave="this.style.transform='scale(1)'">
+  <span style="font-size:14px;line-height:1;">Send</span> Feedback
+</button>
+
+<!-- FEEDBACK SHEET MODAL -->
+<div id="fb-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.6);align-items:flex-end;justify-content:center;"
+  onclick="if(event.target===this)closeFeedback()">
+  <div style="background:#131920;border:1px solid #2a3540;border-radius:12px 12px 0 0;
+    width:100%;max-width:480px;padding:24px 20px 32px;max-height:90vh;overflow-y:auto;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:2px;text-transform:uppercase;color:#fff;">Send Feedback</div>
+        <div style="font-size:11px;color:#556;margin-top:2px;">Only the developer sees this</div>
+      </div>
+      <button onclick="closeFeedback()" style="background:none;border:none;color:#556;font-size:20px;cursor:pointer;padding:4px 8px;line-height:1;">Close</button>
+    </div>
+
+    <!-- Type -->
+    <div style="margin-bottom:10px;">
+      <select id="fb-type" onchange="fbTypeChanged(this.value)"
+        style="width:100%;background:#0f1318;border:1px solid #2a3540;border-radius:6px;
+          color:#ccc;font-family:'Barlow Condensed',sans-serif;font-size:13px;
+          letter-spacing:1px;padding:10px 12px;appearance:none;-webkit-appearance:none;">
+        <option value="">Select type</option>
+        <option value="Bug Report">Bug Report</option>
+        <option value="Suggestion">Suggestion</option>
+        <option value="General Feedback">General Feedback</option>
+      </select>
+    </div>
+
+    <!-- SCORE DISCREPANCY TOGGLE: visible only for bug reports -->
+    <div id="fb-discrepancy-row" style="display:none;margin-bottom:10px;
+      background:#0f1318;border:1px solid rgba(232,160,32,0.25);border-radius:6px;padding:10px 12px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="fb-is-discrepancy" onchange="fbDiscrepancyChanged(this.checked)"
+          style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer;flex-shrink:0;">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;
+          text-transform:uppercase;color:var(--accent);">Score Discrepancy</span>
+      </label>
+    </div>
+
+    <!-- DISCREPANCY DETAIL FIELDS: shown only when checkbox is checked -->
+    <div id="fb-discrepancy-fields" style="display:none;margin-bottom:10px;
+      background:#0f1318;border:1px solid #2a3540;border-radius:6px;padding:12px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;
+        text-transform:uppercase;color:#556;margin-bottom:10px;">Discrepancy Details</div>
+
+      <!-- Sex -->
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;color:#667;margin-bottom:6px;">Sex</div>
+        <div style="display:flex;gap:8px;">
+          <button id="fb-sex-m" onclick="fbSetSex('Male')"
+            style="flex:1;padding:8px;background:rgba(255,255,255,0.05);border:1px solid #2a3540;
+              border-radius:5px;color:#aaa;font-family:'Barlow Condensed',sans-serif;
+              font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Male</button>
+          <button id="fb-sex-f" onclick="fbSetSex('Female')"
+            style="flex:1;padding:8px;background:rgba(255,255,255,0.05);border:1px solid #2a3540;
+              border-radius:5px;color:#aaa;font-family:'Barlow Condensed',sans-serif;
+              font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Female</button>
+        </div>
+        <input type="hidden" id="fb-sex-val" value="">
+      </div>
+
+      <!-- Age -->
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;color:#667;margin-bottom:4px;">Age</div>
+        <input type="number" id="fb-age" min="17" max="65" placeholder="e.g. 28"
+          style="width:100%;background:#131920;border:1px solid #2a3540;border-radius:5px;
+            color:#ccc;font-family:'Barlow',sans-serif;font-size:13px;padding:8px 10px;">
+      </div>
+
+      <!-- Components -->
+      <div>
+        <div style="font-size:11px;color:#667;margin-bottom:4px;">Component(s) Affected</div>
+        <input type="text" id="fb-components" placeholder="e.g. Push-ups, Cardio"
+          style="width:100%;background:#131920;border:1px solid #2a3540;border-radius:5px;
+            color:#ccc;font-family:'Barlow',sans-serif;font-size:13px;padding:8px 10px;">
+      </div>
+    </div>
+
+    <!-- Message -->
+    <div style="margin-bottom:10px;">
+      <textarea id="fb-message" placeholder="Describe the issue or suggestion..." rows="3"
+        style="width:100%;background:#0f1318;border:1px solid #2a3540;border-radius:6px;
+          color:#ccc;font-family:'Barlow',sans-serif;font-size:13px;
+          padding:10px 12px;resize:none;line-height:1.5;"></textarea>
+    </div>
+
+    <div style="font-size:11px;color:#445;margin-bottom:12px;">
+      Screen: <span id="fb-screen-label" style="color:#667;"></span>
+    </div>
+
+    <button onclick="submitFeedback()"
+      style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:6px;
+        color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:900;
+        font-size:14px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">
+       Submit
+    </button>
+    <div id="fb-status" style="margin-top:10px;font-size:12px;text-align:center;min-height:16px;color:#778;"></div>
+  </div>
+</div>
+
+</body>
+</html>
+

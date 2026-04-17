@@ -1,0 +1,59 @@
+export default {
+  async fetch(request, env) {
+
+    // Only allow POST from your domain
+    const origin = request.headers.get('Origin') || '';
+    const allowed = ['https://ptreadiness.app', 'https://www.ptreadiness.app', 'https://pt-ready-2.simpson-sean-h.workers.dev'];
+
+    // Handle CORS preflight
+    if(request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : 'https://ptreadiness.app',
+          'Access-Control-Allow-Methods': 'POST',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Max-Age': '86400',
+        }
+      });
+    }
+
+    // Block non-POST and wrong origin
+    if(request.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+    if(!allowed.includes(origin)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    // Forward request to Groq
+    try {
+      const body = await request.json();
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + env.GROQ_API_KEY
+        },
+        body: JSON.stringify(body)
+      });
+
+      const data = await groqRes.json();
+
+      return new Response(JSON.stringify(data), {
+        status: groqRes.status,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': origin,
+        }
+      });
+    } catch(e) {
+      return new Response(JSON.stringify({ error: { message: 'Proxy error: ' + e.message } }), {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': origin,
+        }
+      });
+    }
+  }
+};
