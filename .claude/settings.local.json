@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(magick --version)",
-      "Bash(convert --version)",
-      "Bash(node -e \"require\\('sharp'\\)\")"
-    ]
-  }
-}
