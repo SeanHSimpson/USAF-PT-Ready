@@ -1,6 +1,6 @@
 # PT Ready — USAF Fitness Prep
 
-An unofficial PFRA fitness preparation tool. Calculate your score, generate AI-driven training plans, and track your progress using the **March 2026 PFRA standards** and **Warfighter's Fitness Playbook 2.0**.
+An unofficial PFRA preparation tool. Calculate your score, generate AI-driven training plans, and track your progress using the **March 2026 PFRA standards** and **Warfighter's Fitness Playbook 2.0**.
 
 > **Disclaimer:** This is an unofficial tool, not affiliated with or endorsed by the U.S. Air Force, DAF, or DoD. For official guidance consult your UFPM or DAFMAN 36-2905.
 
