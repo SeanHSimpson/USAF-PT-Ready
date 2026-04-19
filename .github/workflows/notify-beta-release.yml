@@ -1,0 +1,27 @@
+name: Notify Beta Testers
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Firebase Admin SDK
+        run: npm install firebase-admin@^13.0.0
+
+      - name: Send FCM Topic Notification
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FCM_TOPIC: pt_ready_beta
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+        run: |
+          node -e "const admin=require('firebase-admin'); const sa=process.env.FIREBASE_SERVICE_ACCOUNT_JSON; if(!sa){throw new Error('Missing FIREBASE_SERVICE_ACCOUNT_JSON secret');} admin.initializeApp({credential:admin.credential.cert(JSON.parse(sa))}); const tag=process.env.RELEASE_TAG||'new release'; const name=process.env.RELEASE_NAME||tag; const url=process.env.RELEASE_URL||''; (async()=>{ const message={ topic:process.env.FCM_TOPIC||'pt_ready_beta', notification:{ title:'PT Ready Beta Update', body:'Version '+name+' is now available.' }, data:{ releaseTag:tag, releaseName:name, releaseUrl:url } }; const id=await admin.messaging().send(message); console.log('Sent FCM message:',id); })().catch(err=>{ console.error(err); process.exit(1);});"
