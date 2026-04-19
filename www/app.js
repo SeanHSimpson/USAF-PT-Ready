@@ -2302,7 +2302,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
 // VERSION CHECK  -  force reload if app is stale
 (function checkVersion() {
-  const CURRENT = '2.0';
+  const CURRENT = '2.1.2';
   try {
     const cached = localStorage.getItem('ptr_version');
     if (cached && cached !== CURRENT) {
@@ -2313,6 +2313,190 @@ window.addEventListener('DOMContentLoaded', function() {
     localStorage.setItem('ptr_version', CURRENT);
   } catch(e) {}
 })();
+
+// NATIVE ANDROID RELEASE NOTIFIER
+const PTR_RELEASES_API = 'https://api.github.com/repos/SeanHSimpson/USAF-PT-Ready/releases/latest';
+const PTR_RELEASE_PROMPT_KEY = 'ptr_last_release_prompted';
+let ptrPushInitialized = false;
+
+function getCapacitorPlugin(name) {
+  if (!window.Capacitor || !window.Capacitor.Plugins) return null;
+  return window.Capacitor.Plugins[name] || null;
+}
+
+function isNativeAndroidApp() {
+  if (!window.Capacitor || typeof window.Capacitor.getPlatform !== 'function') return false;
+  if (typeof window.Capacitor.isNativePlatform === 'function' && !window.Capacitor.isNativePlatform()) return false;
+  return window.Capacitor.getPlatform() === 'android';
+}
+
+function normalizeVersion(version) {
+  return String(version || '')
+    .trim()
+    .replace(/^[^\d]*/, '')
+    .split(/[+-]/)[0];
+}
+
+function compareVersions(a, b) {
+  const pa = normalizeVersion(a).split('.').map(n => parseInt(n || '0', 10));
+  const pb = normalizeVersion(b).split('.').map(n => parseInt(n || '0', 10));
+  const maxLen = Math.max(pa.length, pb.length);
+  for (let i = 0; i < maxLen; i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na > nb) return 1;
+    if (na < nb) return -1;
+  }
+  return 0;
+}
+
+function findApkAsset(release) {
+  if (!release || !Array.isArray(release.assets)) return null;
+  return release.assets.find(asset => /\.apk$/i.test(asset.name || '')) || null;
+}
+
+function getLastPromptedRelease() {
+  try { return localStorage.getItem(PTR_RELEASE_PROMPT_KEY) || ''; } catch(e) { return ''; }
+}
+
+function setLastPromptedRelease(tag) {
+  try { localStorage.setItem(PTR_RELEASE_PROMPT_KEY, String(tag || '')); } catch(e) {}
+}
+
+async function getInstalledAppVersion() {
+  const App = getCapacitorPlugin('App');
+  if (App && typeof App.getInfo === 'function') {
+    try {
+      const info = await App.getInfo();
+      if (info && info.version) return info.version;
+    } catch (e) {
+      console.warn('Could not read native app version', e);
+    }
+  }
+  const headerVersion = document.querySelector('.header-ver')?.textContent || '';
+  return headerVersion.replace(/^v/i, '').trim();
+}
+
+async function openExternalUrl(url) {
+  if (!url) return;
+  const Browser = getCapacitorPlugin('Browser');
+  if (Browser && typeof Browser.open === 'function') {
+    await Browser.open({ url: url });
+    return;
+  }
+  window.open(url, '_blank', 'noopener');
+}
+
+async function checkForAndroidReleaseUpdate(opts) {
+  const options = opts || {};
+  if (!isNativeAndroidApp()) return null;
+  try {
+    let release = null;
+    if (options.releaseTag && options.releaseUrl) {
+      release = {
+        tag_name: options.releaseTag,
+        name: options.releaseName || options.releaseTag,
+        html_url: options.releaseUrl,
+        assets: [{ name: 'app-release.apk', browser_download_url: options.releaseUrl }]
+      };
+    } else {
+      const res = await fetch(PTR_RELEASES_API, {
+        headers: { 'Accept': 'application/vnd.github+json' }
+      });
+      if (!res.ok) throw new Error('GitHub release check failed: ' + res.status);
+      release = await res.json();
+    }
+
+    if (!release || !release.tag_name) return null;
+    const latest = normalizeVersion(release.tag_name);
+    const installed = normalizeVersion(await getInstalledAppVersion());
+    if (!latest || !installed || compareVersions(latest, installed) <= 0) return null;
+
+    if (!options.forcePrompt && getLastPromptedRelease() === release.tag_name) return null;
+
+    const apkAsset = findApkAsset(release);
+    const releaseUrl = options.releaseUrl || apkAsset?.browser_download_url || release.html_url;
+    const releaseName = release.name || release.tag_name;
+    const msg =
+      'Update available: ' + releaseName + '\n\n' +
+      'Installed: v' + installed + '\n' +
+      'Latest: v' + latest + '\n\n' +
+      'Open download page now?';
+
+    const openNow = window.confirm(msg);
+    setLastPromptedRelease(release.tag_name);
+    if (openNow && releaseUrl) await openExternalUrl(releaseUrl);
+  } catch (e) {
+    if (!options.silent) console.warn('Release update check failed', e);
+  }
+  return null;
+}
+
+async function initializeAndroidPushNotifications() {
+  if (ptrPushInitialized || !isNativeAndroidApp()) return;
+  const PushNotifications = getCapacitorPlugin('PushNotifications');
+  if (!PushNotifications) return;
+  ptrPushInitialized = true;
+
+  try {
+    let permission = await PushNotifications.checkPermissions();
+    if (permission.receive === 'prompt') {
+      permission = await PushNotifications.requestPermissions();
+    }
+    if (permission.receive !== 'granted') {
+      showToast('Enable notifications in app settings for update alerts');
+      return;
+    }
+
+    PushNotifications.addListener('registration', token => {
+      try { localStorage.setItem('ptr_push_token', token?.value || ''); } catch(e) {}
+      console.log('Push token registered');
+    });
+
+    PushNotifications.addListener('registrationError', error => {
+      console.error('Push registration failed', error);
+    });
+
+    PushNotifications.addListener('pushNotificationReceived', notification => {
+      const tag = notification?.data?.releaseTag || notification?.data?.release_tag;
+      if (tag) showToast('Update ' + tag + ' available');
+    });
+
+    PushNotifications.addListener('pushNotificationActionPerformed', action => {
+      const data = action?.notification?.data || {};
+      const releaseUrl = data.releaseUrl || data.release_url || '';
+      const releaseTag = data.releaseTag || data.release_tag || '';
+      checkForAndroidReleaseUpdate({
+        releaseTag: releaseTag,
+        releaseUrl: releaseUrl,
+        forcePrompt: true,
+        silent: false
+      });
+    });
+
+    // Ensure Android notification channel exists and has high visibility.
+    if (typeof PushNotifications.createChannel === 'function') {
+      await PushNotifications.createChannel({
+        id: 'pt_ready_updates',
+        name: 'PT Ready Updates',
+        description: 'Release and update notifications',
+        importance: 5,
+        visibility: 1,
+        sound: 'default'
+      });
+    }
+
+    await PushNotifications.register();
+  } catch (e) {
+    console.error('Push notification setup failed', e);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  if (!isNativeAndroidApp()) return;
+  initializeAndroidPushNotifications();
+  setTimeout(() => checkForAndroidReleaseUpdate({ silent: true }), 1400);
+});
 
 // ABOUT ACCORDION
 function toggleAboutAcc(id) {

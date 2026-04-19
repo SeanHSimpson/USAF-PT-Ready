@@ -68,6 +68,30 @@ After editing any files in `/www`, run `npx cap sync` to push changes into the A
 
 ---
 
+## Beta Update Notifications (APK on GitHub Releases)
+
+This project now supports beta update notifications for installed Android builds:
+
+- App checks GitHub `latest release` on launch and prompts when a newer APK exists
+- App registers for push notifications and subscribes to FCM topic: `pt_ready_beta`
+- GitHub Action (`.github/workflows/notify-beta-release.yml`) sends a push to that topic whenever a release is published
+
+### One-time setup required
+
+1. Create a Firebase project and add Android app ID `com.ptready.app`
+2. Download `google-services.json` into `android/app/google-services.json`
+3. In GitHub repo secrets, add:
+   - `FIREBASE_SERVICE_ACCOUNT_JSON` (full JSON for a service account with Firebase Messaging permission)
+4. Build and install updated APK so testers grant notification permission
+
+### Release flow
+
+1. Publish a new GitHub Release with the APK attached
+2. GitHub Action sends push notification to beta topic
+3. Tapping notification opens in-app update prompt/download link
+
+---
+
 ## Official References
 
 - [PFRA Scoring Charts (Official PDF)](https://www.afpc.af.mil/Portals/70/documents/FITNESS/PFRA%20Scoring%20Charts.pdf)
