@@ -20,7 +20,7 @@ An unofficial PFRA preparation tool. Calculate your score, generate AI-driven tr
 
 Download the latest APK from the [Releases](../../releases) page.
 
-1. Download `USAF.PT.Ready.apk` to your Android device
+1. Download `ptready.apk` to your Android device
 2. Tap the file to install
 3. If prompted, allow installation from unknown sources
 4. PT Ready will appear on your home screen
